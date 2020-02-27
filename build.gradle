@@ -1,0 +1,59 @@
+buildscript {
+  repositories {
+    mavenCentral()
+  }
+  dependencies {
+    classpath("org.springframework.boot:spring-boot-gradle-plugin:2.2.0.RELEASE")
+  }
+}
+
+plugins {
+  id 'org.springframework.boot' version '2.2.0.RELEASE' apply(false)
+  id 'io.spring.dependency-management' version '1.0.8.RELEASE' apply(false)
+}
+
+allprojects {
+
+  // needed because of multi-module configuration
+  apply plugin: 'jacoco'
+
+  repositories {
+    mavenCentral()
+    jcenter()
+    maven { url 'http://oss.jfrog.org/artifactory/oss-snapshot-local/' }
+  }
+}
+
+// assumed that all subprojects are java-based modules
+subprojects {
+
+  apply from: "${rootDir}/gradle/java.gradle"
+  apply from: "${rootDir}/gradle/checkstyle.gradle"
+
+  jacocoTestReport {
+    reports {
+      xml.enabled true
+      html.enabled false
+    }
+  }
+}
+
+task codeCoverageReport(type: JacocoReport) {
+  executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
+
+  subprojects.each {
+    sourceSets it.sourceSets.main
+  }
+
+  reports {
+    xml.enabled true
+    xml.destination file("${buildDir}/reports/jacoco/report.xml")
+    html.enabled false
+    csv.enabled false
+  }
+}
+
+// https://github.com/codecov/example-gradle#-do-you-support-multi-module-projects
+codeCoverageReport.dependsOn {
+  subprojects*.test
+}
